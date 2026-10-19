@@ -3,22 +3,36 @@ import { useState } from 'react'
 import { CheckCircle2, ChevronLeft, ChevronRight, MousePointerClick } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import SchoolMap, { facilityIcons } from '../components/SchoolMap'
-import { facilities, type FacilityKind } from '../data/facilities'
+import { facilities, floors, type FacilityKind, type FloorId } from '../data/facilities'
 import { img } from '../data/gallery'
 
 export default function MapPage() {
-  const [selected, setSelected] = useState<FacilityKind | null>('classes')
+  const [selected, setSelected] = useState<FacilityKind | null>('entrance')
+  const [floor, setFloor] = useState<FloorId>('ground')
   const idx = facilities.findIndex((f) => f.id === selected)
   const current = idx >= 0 ? facilities[idx] : null
 
+  // اختيار مرفق غير موجود في الطابق الحالي ينقل الخريطة إلى طابقه
+  const select = (id: FacilityKind) => {
+    setSelected(id)
+    const f = facilities.find((x) => x.id === id)!
+    if (!f.pins[floor]) setFloor(f.pins.ground ? 'ground' : 'first')
+  }
+
   const step = (d: number) => {
     const n = (Math.max(idx, 0) + d + facilities.length) % facilities.length
-    setSelected(facilities[n].id)
+    select(facilities[n].id)
+  }
+
+  const floorNames = (id: FacilityKind) => {
+    const f = facilities.find((x) => x.id === id)!
+    const on = floors.filter((fl) => f.pins[fl.id])
+    return on.length > 1 ? 'الطابقان الأرضي والأول' : on[0].label
   }
 
   return (
     <>
-      <PageHeader title="خريطة المدرسة" subtitle="خريطة تفاعلية توضح مرافق المدرسة — اضغط على أي مرفق لعرض تفاصيله" />
+      <PageHeader title="خريطة المدرسة" subtitle="مخطط تفاعلي للمبنى بطابقيه حسب المخططات المعتمدة — اضغط على أي مرفق لعرض تفاصيله" />
 
       <div className="mx-auto max-w-6xl px-4 pb-10">
         {/* قائمة المرافق */}
@@ -29,7 +43,7 @@ export default function MapPage() {
             return (
               <button
                 key={f.id}
-                onClick={() => setSelected(f.id)}
+                onClick={() => select(f.id)}
                 className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition ${
                   active
                     ? 'bg-brand-700 text-white shadow'
@@ -45,10 +59,10 @@ export default function MapPage() {
 
         <div className="grid gap-5 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <SchoolMap selected={selected} onSelect={setSelected} />
+            <SchoolMap floor={floor} onFloorChange={setFloor} selected={selected} onSelect={select} />
             <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
               <MousePointerClick className="h-3.5 w-3.5" />
-              استخدم أزرار التكبير ثم اسحب الخريطة للتنقل. الخريطة توضيحية.
+              استخدم أزرار التكبير ثم اسحب الخريطة للتنقل. المخطط مبسّط عن المخططات المعمارية.
             </p>
           </div>
 
@@ -65,7 +79,18 @@ export default function MapPage() {
                   className="overflow-hidden rounded-3xl border border-sand-200 bg-white shadow-sm"
                 >
                   <div className="relative">
-                    <img src={img(current.image, 'sm')} alt={current.name} className="aspect-[16/9] w-full object-cover" />
+                    {current.image ? (
+                      <img src={img(current.image, 'sm')} alt={current.name} className="aspect-[16/9] w-full object-cover" />
+                    ) : (
+                      (() => {
+                        const Icon = facilityIcons[current.id]
+                        return (
+                          <div className="pattern-bg grid aspect-[16/9] w-full place-items-center bg-brand-50">
+                            <Icon className="h-16 w-16 text-brand-600/70" strokeWidth={1.5} />
+                          </div>
+                        )
+                      })()
+                    )}
                     <span className="absolute top-3 right-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-brand-800">
                       {idx + 1} / {facilities.length}
                     </span>
@@ -82,7 +107,7 @@ export default function MapPage() {
                       })()}
                       <div>
                         <h2 className="text-xl font-bold text-brand-800">{current.name}</h2>
-                        <p className="text-xs text-gold-600">{current.short}</p>
+                        <p className="text-xs text-gold-600">{current.short} · {floorNames(current.id)}</p>
                       </div>
                     </div>
                     <p className="mt-3 text-[15px] leading-7 text-ink/80">{current.description}</p>

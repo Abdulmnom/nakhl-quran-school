@@ -16,7 +16,7 @@ export default function PageHeader({ title, subtitle }: Props) {
           <ChevronRight className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-brand-800 md:text-3xl">{title}</h1>
+          <h1 className="font-kufi text-3xl font-bold text-brand-800 md:text-4xl">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted md:text-base">{subtitle}</p>}
         </div>
       </div>

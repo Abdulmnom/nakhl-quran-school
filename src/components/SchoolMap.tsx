@@ -1,28 +1,36 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
-  Briefcase, ConciergeBell, DoorOpen, Droplets, Landmark, Library, Minus, Plus, RotateCcw,
-  School, SquareParking, Sun, TreePalm, Trophy, type LucideIcon,
+  ArrowUpDown, Briefcase, Coffee, DoorClosed, DoorOpen, Droplets, Mic, Minus, Plus, Presentation,
+  RotateCcw, School, Sun, type LucideIcon,
 } from 'lucide-react'
-import { facilities, type Facility, type FacilityKind } from '../data/facilities'
+import { facilities, floors, type Facility, type FacilityKind, type FloorId } from '../data/facilities'
+import { dome, floorPlans, PLAN_H, PLAN_W, type Room, type RoomKind } from '../data/floorplan'
 
 export const facilityIcons: Record<FacilityKind, LucideIcon> = {
   entrance: DoorOpen,
-  reception: ConciergeBell,
   classes: School,
-  library: Library,
+  hall: Presentation,
   admin: Briefcase,
-  prayer: Landmark,
   wudu: Droplets,
+  rooms: DoorClosed,
   courtyard: Sun,
-  activities: Trophy,
-  garden: TreePalm,
-  parking: SquareParking,
+  canteen: Coffee,
+  studio: Mic,
+  services: ArrowUpDown,
 }
 
-const VW = 1000
-const VH = 760
+/** وحدات الرسم لكل متر */
+const S = 20
+const OX = 40
+const OY = 40
+const FRONT = 7 // مساحة أمام المبنى بالمتر
+const VW = PLAN_W * S + OX * 2
+const VH = (PLAN_H + FRONT) * S + OY
 const MIN = 1
-const MAX = 3
+const MAX = 4
+
+const px = (m: number) => OX + m * S
+const py = (m: number) => OY + m * S
 
 type View = { s: number; x: number; y: number }
 
@@ -36,31 +44,40 @@ const clampView = ({ s, x, y }: View): View => {
 }
 
 /* ------------------------------------------------------------------ */
-/* عناصر الرسم                                                         */
+/* ألوان وأنماط الرسم                                                   */
 /* ------------------------------------------------------------------ */
 
 const C = {
   outside: '#E6D7B5',
-  ground: '#F1E7D0',
-  wall: '#D2B98A',
-  wallTop: '#E4CFA4',
-  building: '#F6EBD3',
-  roof: '#E9D5AC',
-  roofEdge: '#C9A96E',
+  wall: '#7D6A4F',
   green: '#1F5A45',
   gold: '#C9A24A',
-  path: '#FAF4E6',
-  tile: '#E8DCC0',
-  grass: '#B9D3A0',
-  grassDark: '#8DB57A',
-  water: '#9CCBE0',
   ink: '#10322A',
 }
+
+const fills: Record<RoomKind, string> = {
+  classroom: '#E2EEE6',
+  hall: '#F3E5C1',
+  office: '#ECE2CF',
+  wet: '#DAEBF3',
+  room: '#EFE5D3',
+  circulation: '#FBF8F1',
+  service: '#E9E3D6',
+  outdoor: 'url(#tiles)',
+  roof: 'url(#roof)',
+  entry: '#F6E8C8',
+  food: '#F4DFC4',
+  ramp: 'url(#ramp)',
+  stairs: 'url(#stairs)',
+  lift: '#DED7C8',
+}
+
+const thinWall = new Set<RoomKind>(['circulation', 'outdoor', 'ramp'])
 
 function Palm({ x, y, r = 16 }: { x: number; y: number; r?: number }) {
   const fronds = Array.from({ length: 7 }, (_, i) => (i * 360) / 7)
   return (
-    <g transform={`translate(${x} ${y})`}>
+    <g transform={`translate(${x} ${y})`} aria-hidden="true">
       <ellipse cx={4} cy={6} rx={r * 0.9} ry={r * 0.5} fill="rgba(60,40,10,0.15)" />
       {fronds.map((a) => (
         <path
@@ -75,55 +92,23 @@ function Palm({ x, y, r = 16 }: { x: number; y: number; r?: number }) {
   )
 }
 
-function Building({
-  x, y, w, h, active, children,
-}: { x: number; y: number; w: number; h: number; active: boolean; children?: ReactNode }) {
-  return (
-    <g>
-      <rect x={x + 7} y={y + 9} width={w} height={h} rx={6} fill="rgba(70,50,20,0.16)" />
-      <rect
-        x={x}
-        y={y}
-        width={w}
-        height={h}
-        rx={6}
-        fill={C.roof}
-        stroke={active ? C.gold : C.roofEdge}
-        strokeWidth={active ? 5 : 2}
-        style={{ transition: 'stroke 0.3s, stroke-width 0.3s' }}
-      />
-      <rect x={x + 8} y={y + 8} width={w - 16} height={h - 16} rx={3} fill={C.building} />
-      {children}
-    </g>
-  )
-}
-
-function Label({ x, y, text, show }: { x: number; y: number; text: string; show: boolean }) {
-  if (!show) return null
-  return (
-    <text
-      x={x}
-      y={y}
-      textAnchor="middle"
-      fontSize={17}
-      fontWeight={700}
-      fill={C.ink}
-      fontFamily="IBM Plex Sans Arabic, sans-serif"
-      style={{ paintOrder: 'stroke', stroke: 'rgba(255,250,240,0.9)', strokeWidth: 4, pointerEvents: 'none' }}
-    >
-      {text}
-    </text>
-  )
+function labelSize(room: Room) {
+  if (room.kind === 'hall') return 26
+  const w = (room.vertical ? room.y2 - room.y1 : room.x2 - room.x1) * S
+  const h = (room.vertical ? room.x2 - room.x1 : room.y2 - room.y1) * S
+  return Math.max(9, Math.min(16, h * 0.42, (w * 1.6) / Math.max(3, room.label!.length)))
 }
 
 /* ------------------------------------------------------------------ */
 
 type Props = {
+  floor: FloorId
+  onFloorChange: (f: FloorId) => void
   selected: FacilityKind | null
   onSelect: (id: FacilityKind) => void
 }
 
-export default function SchoolMap({ selected, onSelect }: Props) {
+export default function SchoolMap({ floor, onFloorChange, selected, onSelect }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const [view, setView] = useState<View>({ s: 1, x: 0, y: 0 })
@@ -151,14 +136,14 @@ export default function SchoolMap({ selected, onSelect }: Props) {
       firstFocus.current = false
       return
     }
-    const f = facilities.find((x) => x.id === selected)
-    if (!f) return
+    const pin = facilities.find((x) => x.id === selected)?.pins[floor]
+    if (!pin) return
     setView((v) => {
-      const s = widthRef.current < 640 ? Math.max(v.s, 1.8) : v.s
+      const s = widthRef.current < 640 ? Math.max(v.s, 2.2) : v.s
       if (s === 1) return v
-      return clampView({ s, x: VW / 2 - s * f.pin.x, y: VH / 2 - s * f.pin.y })
+      return clampView({ s, x: VW / 2 - s * px(pin.x), y: VH / 2 - s * py(pin.y) })
     })
-  }, [selected])
+  }, [selected, floor])
 
   const zoom = (factor: number) =>
     setView((v) => {
@@ -196,22 +181,11 @@ export default function SchoolMap({ selected, onSelect }: Props) {
     onSelect(id)
   }
 
-  const showLabels = (width / VW) * view.s >= 0.62
+  const rooms = floorPlans[floor]
   const k = (width / VW) * view.s
-  const pinScale = Math.max(0.6, Math.min(1.5, (width < 640 ? 44 : 56) / (60 * k)))
-  const is = (id: FacilityKind) => selected === id
-
-  const area = (id: FacilityKind, el: ReactNode) => (
-    <g
-      key={id}
-      onClick={() => pick(id)}
-      className="cursor-pointer"
-      role="button"
-      aria-label={facilities.find((f) => f.id === id)?.name}
-    >
-      {el}
-    </g>
-  )
+  const pinScale = Math.max(0.55, Math.min(1.5, (width < 640 ? 40 : 52) / (60 * k)))
+  const showLabel = (fs: number) => fs * k >= 8.5
+  const solid = rooms.filter((rm) => rm.kind !== 'outdoor' && rm.kind !== 'ramp')
 
   return (
     <div ref={wrapRef} className="relative overflow-hidden rounded-3xl border border-sand-200 bg-[#E6D7B5] shadow-lg shadow-brand-900/10">
@@ -222,16 +196,24 @@ export default function SchoolMap({ selected, onSelect }: Props) {
         style={{ touchAction: view.s > 1 ? 'none' : 'pan-y' }}
         onPointerDown={onPointerDown}
         role="img"
-        aria-label="خريطة مدرسة نخل للقرآن الكريم"
+        aria-label={`مخطط ${floors.find((f) => f.id === floor)?.label} — مدرسة نخل الوقفية للقرآن الكريم`}
       >
         <defs>
-          <pattern id="tiles" width="28" height="28" patternUnits="userSpaceOnUse">
-            <rect width="28" height="28" fill={C.tile} />
-            <path d="M14 2 L26 14 L14 26 L2 14 Z" fill="none" stroke="#D9C8A2" strokeWidth="1.5" />
+          <pattern id="tiles" width="24" height="24" patternUnits="userSpaceOnUse">
+            <rect width="24" height="24" fill="#EADFC6" />
+            <path d="M12 2 L22 12 L12 22 L2 12 Z" fill="none" stroke="#D9C8A2" strokeWidth="1.3" />
           </pattern>
-          <pattern id="parking" width="44" height="80" patternUnits="userSpaceOnUse">
-            <rect width="44" height="80" fill="#CFC6B4" />
-            <line x1="0" y1="0" x2="0" y2="62" stroke="#fff" strokeWidth="3" />
+          <pattern id="roof" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="14" height="14" fill="#E4DCCB" />
+            <line x1="0" y1="0" x2="0" y2="14" stroke="#D3C8B0" strokeWidth="3" />
+          </pattern>
+          <pattern id="stairs" width="10" height="10" patternUnits="userSpaceOnUse">
+            <rect width="10" height="10" fill="#EFE9DD" />
+            <line x1="0" y1="0" x2="0" y2="10" stroke="#B9AC92" strokeWidth="1.5" />
+          </pattern>
+          <pattern id="ramp" width="10" height="10" patternUnits="userSpaceOnUse">
+            <rect width="10" height="10" fill="#E9E1CF" />
+            <path d="M0 10 L5 4 L10 10" fill="none" stroke="#B9AC92" strokeWidth="1.2" />
           </pattern>
           <pattern id="sand" width="40" height="40" patternUnits="userSpaceOnUse">
             <rect width="40" height="40" fill={C.outside} />
@@ -250,197 +232,152 @@ export default function SchoolMap({ selected, onSelect }: Props) {
             transition: dragging ? 'none' : 'transform 0.45s cubic-bezier(.2,.8,.2,1)',
           }}
         >
-          {/* الأرض الخارجية */}
+          {/* الأرض والساحة الأمامية */}
           <rect width={VW} height={VH} fill="url(#sand)" />
-          {/* الطريق */}
-          <rect x={0} y={748} width={VW} height={12} fill="#BDB3A1" />
+          <rect x={px(14)} y={py(PLAN_H) - 4} width={16 * S} height={FRONT * S + 4} fill="#EFE6D2" />
+          <rect x={px(20.6)} y={py(PLAN_H) - 4} width={2.8 * S} height={FRONT * S + 4} fill="#FAF4E6" />
+          {[1, 6, 34, 39.5, 43].map((x) => (
+            <Palm key={`f-${x}`} x={px(x)} y={py(PLAN_H + 3.2)} r={16} />
+          ))}
+          {[8, 18, 28, 38].map((y) => (
+            <g key={`s-${y}`}>
+              <Palm x={px(-1.2)} y={py(y)} r={13} />
+              <Palm x={px(PLAN_W + 1.2)} y={py(y)} r={13} />
+            </g>
+          ))}
 
-          {/* موقف السيارات */}
-          {area(
-            'parking',
-            <g>
-              <rect x={110} y={664} width={370} height={80} rx={8} fill="url(#parking)" stroke={is('parking') ? C.gold : '#B9AE98'} strokeWidth={is('parking') ? 5 : 2} />
-              {[0, 2, 3, 6].map((i) => (
-                <rect key={i} x={118 + i * 44} y={672} width={28} height={50} rx={7} fill={['#2F6E8F', '#E7E2D6', '#8E3B3B', '#5B5B5B'][i % 4]} />
-              ))}
-              <Label x={380} y={712} text="موقف السيارات" show={showLabels} />
-            </g>,
-          )}
-          {/* ممر من الموقف */}
-          <rect x={480} y={640} width={40} height={108} fill={C.path} />
-          <rect x={520} y={680} width={300} height={22} fill={C.path} opacity={0.6} />
-
-          {/* السور */}
-          <rect x={60} y={60} width={880} height={580} rx={20} fill={C.ground} />
-          <rect x={60} y={60} width={880} height={580} rx={20} fill="none" stroke={C.wall} strokeWidth={14} />
-          <rect x={60} y={60} width={880} height={580} rx={20} fill="none" stroke={C.wallTop} strokeWidth={4} strokeDasharray="14 10" />
-
-          {/* الممرات الداخلية */}
-          <g fill={C.path}>
-            <rect x={482} y={515} width={36} height={130} />
-            <rect x={285} y={260} width={30} height={60} />
-            <rect x={300} y={395} width={45} height={30} />
-            <rect x={655} y={345} width={50} height={30} />
-            <rect x={655} y={505} width={50} height={26} />
-            <rect x={665} y={230} width={30} height={75} />
-            <rect x={830} y={230} width={26} height={60} />
-            <rect x={150} y={480} width={30} height={45} />
-            <rect x={518} y={572} width={55} height={26} />
+          {/* ظل المبنى */}
+          <g fill="rgba(70,50,20,0.16)" aria-hidden="true">
+            {solid.map((rm) => (
+              <rect key={`sh-${rm.key}`} x={px(rm.x1) + 6} y={py(rm.y1) + 8} width={(rm.x2 - rm.x1) * S} height={(rm.y2 - rm.y1) * S} />
+            ))}
           </g>
 
-          {/* الساحة */}
-          {area(
-            'courtyard',
-            <g>
-              <rect x={340} y={300} width={320} height={220} rx={14} fill="url(#tiles)" stroke={is('courtyard') ? C.gold : '#D3C094'} strokeWidth={is('courtyard') ? 5 : 2} />
-              <polygon points="500,368 530,380 542,410 530,440 500,452 470,440 458,410 470,380" fill="#E0CDA4" stroke="#C9A96E" strokeWidth={2} />
-              <circle cx={500} cy={410} r={26} fill={C.water} />
-              <circle cx={500} cy={410} r={8} fill="#E8F5FA" />
-              {[370, 630].map((x) => (
-                <g key={x}>
-                  <rect x={x - 14} y={322} width={28} height={10} rx={3} fill="#A98A5C" />
-                  <rect x={x - 14} y={488} width={28} height={10} rx={3} fill="#A98A5C" />
-                </g>
+          {/* الغرف */}
+          {rooms.map((rm) => {
+            const x = px(rm.x1)
+            const y = py(rm.y1)
+            const w = (rm.x2 - rm.x1) * S
+            const h = (rm.y2 - rm.y1) * S
+            const fac = rm.facility
+            return (
+              <rect
+                key={rm.key}
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                fill={fills[rm.kind]}
+                stroke={thinWall.has(rm.kind) ? '#D8CCB2' : C.wall}
+                strokeWidth={thinWall.has(rm.kind) ? 1 : 3}
+                className={fac ? 'cursor-pointer' : undefined}
+                onClick={fac ? () => pick(fac) : undefined}
+              />
+            )
+          })}
+
+          {/* القبة فوق المدخل */}
+          {floor === 'first' && (
+            <g onClick={() => pick('entrance')} className="cursor-pointer">
+              <circle cx={px(dome.cx)} cy={py(dome.cy)} r={dome.r * S} fill="#FBF6EA" stroke={C.wall} strokeWidth={3} />
+              {Array.from({ length: 12 }, (_, i) => (
+                <line
+                  key={i}
+                  x1={px(dome.cx)}
+                  y1={py(dome.cy)}
+                  x2={px(dome.cx) + Math.cos((i * Math.PI) / 6) * dome.r * S}
+                  y2={py(dome.cy) + Math.sin((i * Math.PI) / 6) * dome.r * S}
+                  stroke="#CDBE9F"
+                  strokeWidth={1.2}
+                />
               ))}
-              <Label x={430} y={505} text="الساحة" show={showLabels} />
-            </g>,
+              <circle cx={px(dome.cx)} cy={py(dome.cy)} r={5} fill={C.gold} />
+            </g>
           )}
 
-          {/* الفصول الدراسية */}
-          {area(
-            'classes',
-            <Building x={100} y={100} w={370} h={160} active={is('classes')}>
-              {Array.from({ length: 6 }, (_, i) => (
-                <rect key={i} x={116 + i * 58} y={116} width={50} height={60} rx={4} fill="#EEDDBB" stroke="#D6BF92" />
-              ))}
-              <rect x={116} y={186} width={338} height={16} rx={3} fill="#E3CFA6" />
-              <Label x={285} y={238} text="الفصول الدراسية" show={showLabels} />
-            </Building>,
+          {/* تمييز المرفق المختار */}
+          {selected && (
+            <g pointerEvents="none">
+              {rooms
+                .filter((rm) => rm.facility === selected)
+                .map((rm) => (
+                  <rect
+                    key={`hl-${rm.key}`}
+                    x={px(rm.x1)}
+                    y={py(rm.y1)}
+                    width={(rm.x2 - rm.x1) * S}
+                    height={(rm.y2 - rm.y1) * S}
+                    fill="rgba(201,162,74,0.28)"
+                    stroke={C.gold}
+                    strokeWidth={5}
+                  />
+                ))}
+            </g>
           )}
 
-          {/* المكتبة */}
-          {area(
-            'library',
-            <Building x={590} y={100} w={180} h={130} active={is('library')}>
-              {[0, 1, 2].map((i) => (
-                <rect key={i} x={612} y={118 + i * 18} width={136} height={8} rx={2} fill="#B7834F" />
-              ))}
-              <Label x={680} y={208} text="المكتبة" show={showLabels} />
-            </Building>,
-          )}
-
-          {/* الإدارة */}
-          {area(
-            'admin',
-            <Building x={790} y={100} w={115} h={130} active={is('admin')}>
-              <rect x={806} y={118} width={36} height={30} rx={3} fill="#EEDDBB" stroke="#D6BF92" />
-              <rect x={852} y={118} width={36} height={30} rx={3} fill="#EEDDBB" stroke="#D6BF92" />
-              <Label x={847} y={208} text="الإدارة" show={showLabels} />
-            </Building>,
-          )}
-
-          {/* المصلى */}
-          {area(
-            'prayer',
-            <Building x={100} y={310} w={200} h={170} active={is('prayer')}>
-              <circle cx={200} cy={385} r={48} fill="#2A6B53" stroke={C.gold} strokeWidth={4} />
-              <circle cx={200} cy={385} r={30} fill="#327C60" />
-              <circle cx={200} cy={385} r={7} fill={C.gold} />
-              <rect x={268} y={318} width={22} height={22} rx={11} fill={C.gold} />
-              <Label x={200} y={462} text="المصلى" show={showLabels} />
-            </Building>,
-          )}
-
-          {/* الوضوء */}
-          {area(
-            'wudu',
-            <Building x={100} y={525} w={150} h={90} active={is('wudu')}>
-              {[0, 1, 2, 3].map((i) => (
-                <circle key={i} cx={125 + i * 33} cy={552} r={8} fill={C.water} stroke="#7FB3CA" />
-              ))}
-              <Label x={175} y={598} text="الوضوء" show={showLabels} />
-            </Building>,
-          )}
-
-          {/* قاعة الأنشطة */}
-          {area(
-            'activities',
-            <Building x={705} y={290} w={200} h={150} active={is('activities')}>
-              <rect x={725} y={308} width={160} height={30} rx={4} fill="#DCC69A" />
-              {Array.from({ length: 4 }, (_, r) =>
-                Array.from({ length: 6 }, (_, c) => (
-                  <circle key={`${r}-${c}`} cx={740 + c * 26} cy={356 + r * 14} r={4} fill="#B89A66" />
-                )),
-              )}
-              <Label x={805} y={428} text="قاعة الأنشطة" show={showLabels} />
-            </Building>,
-          )}
-
-          {/* الحديقة */}
-          {area(
-            'garden',
-            <g>
-              <rect x={705} y={465} width={200} height={150} rx={16} fill={C.grass} stroke={is('garden') ? C.gold : C.grassDark} strokeWidth={is('garden') ? 5 : 2} />
-              <path d="M720 600 C 760 540, 820 600, 890 480" stroke="#E8DCC0" strokeWidth={10} fill="none" strokeLinecap="round" />
-              <Palm x={740} y={495} />
-              <Palm x={870} y={585} />
-              <Palm x={760} y={575} r={13} />
-              <Palm x={880} y={500} r={13} />
-              <Label x={815} y={548} text="الحديقة" show={showLabels} />
-            </g>,
-          )}
-
-          {/* الاستقبال */}
-          {area(
-            'reception',
-            <Building x={572} y={555} w={95} h={70} active={is('reception')}>
-              <Label x={620} y={598} text="الاستقبال" show={showLabels} />
-            </Building>,
-          )}
-
-          {/* البوابة */}
-          {area(
-            'entrance',
-            <g>
-              <rect x={466} y={624} width={68} height={32} fill={C.path} />
-              <rect x={452} y={620} width={20} height={40} rx={4} fill={C.wall} stroke={is('entrance') ? C.gold : '#B89C66'} strokeWidth={is('entrance') ? 4 : 2} />
-              <rect x={528} y={620} width={20} height={40} rx={4} fill={C.wall} stroke={is('entrance') ? C.gold : '#B89C66'} strokeWidth={is('entrance') ? 4 : 2} />
-              <path d="M472 628 Q500 606 528 628" fill="none" stroke={C.green} strokeWidth={6} />
-            </g>,
-          )}
-
-          {/* نخيل على امتداد السور */}
-          {[
-            [330, 90], [560, 88], [560, 270], [320, 560], [400, 590], [680, 260], [920, 260], [920, 440], [80, 290], [80, 500],
-          ].map(([x, y]) => (
-            <Palm key={`${x}-${y}`} x={x} y={y} r={14} />
-          ))}
-          {[[40, 700], [960, 700], [30, 120], [970, 140], [560, 720], [880, 715]].map(([x, y]) => (
-            <Palm key={`o-${x}-${y}`} x={x} y={y} r={18} />
-          ))}
+          {/* أسماء الغرف */}
+          <g pointerEvents="none">
+            {rooms.map((rm) => {
+              if (!rm.label) return null
+              const fs = labelSize(rm)
+              if (!showLabel(fs)) return null
+              const cx = px((rm.x1 + rm.x2) / 2)
+              const cy = py((rm.y1 + rm.y2) / 2)
+              return (
+                <text
+                  key={`t-${rm.key}`}
+                  x={cx}
+                  y={cy}
+                  dy="0.35em"
+                  textAnchor="middle"
+                  fontSize={fs}
+                  fontWeight={700}
+                  fill={rm.kind === 'circulation' || rm.kind === 'roof' ? '#8A7B60' : C.ink}
+                  fontFamily="IBM Plex Sans Arabic, sans-serif"
+                  transform={rm.vertical ? `rotate(-90 ${cx} ${cy})` : undefined}
+                  style={{ paintOrder: 'stroke', stroke: 'rgba(255,250,240,0.85)', strokeWidth: 3 }}
+                >
+                  {rm.label}
+                </text>
+              )
+            })}
+          </g>
 
           {/* أنت هنا */}
-          <g transform="translate(500 724)">
-            <circle r={16} fill="#3B82F6" opacity={0.2}>
-              <animate attributeName="r" values="10;20;10" dur="2.4s" repeatCount="indefinite" />
-            </circle>
-            <circle r={8} fill="#3B82F6" stroke="#fff" strokeWidth={3} />
-          </g>
+          {floor === 'ground' && (
+            <g transform={`translate(${px(22)} ${py(PLAN_H + 4.2)})`}>
+              <circle r={16} fill="#3B82F6" opacity={0.2}>
+                <animate attributeName="r" values="10;20;10" dur="2.4s" repeatCount="indefinite" />
+              </circle>
+              <circle r={8} fill="#3B82F6" stroke="#fff" strokeWidth={3} />
+            </g>
+          )}
 
           {/* الدبابيس */}
-          {facilities.map((f) => (
-            <Pin key={f.id} f={f} active={is(f.id)} scale={pinScale} onClick={() => pick(f.id)} />
-          ))}
-        </g>
-
-        {/* البوصلة (ثابتة) */}
-        <g transform="translate(948 52)" aria-hidden="true">
-          <circle r={30} fill="rgba(255,255,255,0.92)" stroke="#D2B98A" strokeWidth={2} />
-          <path d="M0 -20 L7 2 L0 -2 L-7 2 Z" fill="#B23B3B" />
-          <path d="M0 20 L7 2 L0 6 L-7 2 Z" fill="#9AA5A0" />
-          <text x={-44} y={6} textAnchor="middle" fontSize={16} fontWeight={700} fill={C.ink} fontFamily="IBM Plex Sans Arabic, sans-serif">ش</text>
+          {facilities.map((f) =>
+            f.pins[floor] ? (
+              <Pin key={f.id} f={f} at={f.pins[floor]!} active={selected === f.id} scale={pinScale} onClick={() => pick(f.id)} />
+            ) : null,
+          )}
         </g>
       </svg>
+
+      {/* اختيار الطابق */}
+      <div className="absolute bottom-3 left-3 flex overflow-hidden rounded-xl border border-sand-200 bg-white/95 p-1 shadow-md" role="tablist" aria-label="الطابق">
+        {floors.map((f) => (
+          <button
+            key={f.id}
+            role="tab"
+            aria-selected={floor === f.id}
+            onClick={() => onFloorChange(f.id)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+              floor === f.id ? 'bg-brand-700 text-white' : 'text-brand-800 hover:bg-sand-50'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
       {/* أدوات التكبير */}
       <div className="absolute top-3 left-3 flex flex-col overflow-hidden rounded-xl border border-sand-200 bg-white/95 shadow-md">
@@ -455,20 +392,24 @@ export default function SchoolMap({ selected, onSelect }: Props) {
         </button>
       </div>
 
-      <div className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-brand-800 shadow">
-        <span className="h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
-        أنت هنا
-      </div>
+      {floor === 'ground' && (
+        <div className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-brand-800 shadow">
+          <span className="h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
+          أنت هنا
+        </div>
+      )}
     </div>
   )
 }
 
-function Pin({ f, active, scale, onClick }: { f: Facility; active: boolean; scale: number; onClick: () => void }) {
+function Pin({
+  f, at, active, scale, onClick,
+}: { f: Facility; at: { x: number; y: number }; active: boolean; scale: number; onClick: () => void }) {
   const Icon = facilityIcons[f.id]
   const s = scale * (active ? 1.25 : 1)
   return (
     <g
-      transform={`translate(${f.pin.x} ${f.pin.y}) scale(${s})`}
+      transform={`translate(${px(at.x)} ${py(at.y)}) scale(${s})`}
       onClick={(e) => {
         e.stopPropagation()
         onClick()

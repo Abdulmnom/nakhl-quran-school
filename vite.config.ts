@@ -9,11 +9,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['logo.svg', 'icons/apple-touch-icon.png'],
+      includeAssets: ['favicon.png', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'مدرسة نخل للقرآن الكريم',
+        name: 'مدرسة نخل الوقفية للقرآن الكريم',
         short_name: 'مدرسة نخل',
-        description: 'منصة تعريفية وتبرعات لمدرسة نخل للقرآن الكريم',
+        description: 'منصة تعريفية وتبرعات لمدرسة نخل الوقفية للقرآن الكريم',
         lang: 'ar',
         dir: 'rtl',
         start_url: '/',

@@ -3,9 +3,9 @@
 
 export const donation = {
   isPlaceholder: true,
-  headline: 'ساهم في دعم مدرسة نخل للقرآن الكريم',
+  headline: 'ساهم في دعم مدرسة نخل الوقفية للقرآن الكريم',
   subline: 'صدقة جارية بإذن الله',
-  accountName: 'مدرسة نخل للقرآن الكريم',
+  accountName: 'مدرسة نخل الوقفية للقرآن الكريم',
   bankName: 'اسم البنك',
   accountNumber: '0000 0000 0000',
   iban: 'OM00 0000 0000 0000 0000 000',

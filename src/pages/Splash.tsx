@@ -16,7 +16,7 @@ export default function Splash() {
     <div className="relative min-h-dvh overflow-hidden bg-sand-100 lg:grid lg:grid-cols-2">
       {/* الصورة (حاسوب) */}
       <div className="relative hidden lg:block">
-        <img src={img('hero')} alt="مبنى مدرسة نخل للقرآن الكريم" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={img('hero')} alt="مبنى مدرسة نخل الوقفية للقرآن الكريم" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-l from-sand-100 via-brand-900/10 to-brand-900/40" />
         <div className="absolute bottom-10 right-10 left-10 text-white">
           <p className="font-quran text-4xl leading-relaxed drop-shadow">«{site.hadith.text}»</p>
@@ -36,14 +36,14 @@ export default function Splash() {
           <div className="relative overflow-hidden rounded-t-[11rem] rounded-b-3xl border border-gold-300/70 bg-sand-50 px-7 pt-16 pb-9 text-center shadow-[0_30px_60px_-30px_rgba(16,50,42,0.35)]">
             <div className="pointer-events-none absolute inset-3 rounded-t-[10rem] rounded-b-2xl border border-gold-300/40" />
 
-            <motion.div {...fade(0.15)} className="mx-auto mb-4 grid h-24 w-24 place-items-center rounded-full bg-white shadow-md ring-1 ring-gold-300/60">
-              <Logo className="h-16 w-16" />
+            <motion.div {...fade(0.15)} className="mx-auto mb-2">
+              <Logo variant="full" className="mx-auto h-44 w-auto sm:h-52" />
             </motion.div>
 
-            <motion.h1 {...fade(0.25)} className="text-2xl font-bold text-brand-800">
+            <motion.h1 {...fade(0.25)} className="sr-only">
               {site.name}
             </motion.h1>
-            <motion.p {...fade(0.3)} className="mt-1 text-sm text-gold-600">
+            <motion.p {...fade(0.3)} className="mt-1 text-base font-medium text-gold-600">
               {site.subtitle}
             </motion.p>
 
@@ -75,7 +75,7 @@ export default function Splash() {
             </motion.div>
           </div>
 
-          <motion.p {...fade(0.9)} className="mt-6 text-center text-sm text-gold-600">
+          <motion.p {...fade(0.9)} className="mt-6 text-center font-ruqaa text-3xl leading-normal text-gold-600 sm:text-4xl">
             {site.tagline}
           </motion.p>
         </motion.div>

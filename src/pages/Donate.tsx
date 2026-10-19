@@ -36,8 +36,8 @@ export default function Donate() {
           <div className="absolute inset-0 bg-gradient-to-l from-brand-900/95 via-brand-800/80 to-brand-700/50" />
           <div className="relative p-6 md:p-10">
             <Sprout className="h-9 w-9 text-gold-300" />
-            <h2 className="mt-3 max-w-md text-2xl font-bold leading-snug md:text-3xl">{donation.headline}</h2>
-            <p className="mt-2 text-gold-300">{donation.subline}</p>
+            <h2 className="mt-3 max-w-md font-kufi text-2xl font-bold leading-snug md:text-4xl">{donation.headline}</h2>
+            <p className="mt-2 font-ruqaa text-3xl text-gold-300 md:text-4xl">{donation.subline}</p>
             <p className="mt-4 max-w-lg font-quran text-lg leading-8 text-sand-100/90">
               «إذا مات الإنسان انقطع عمله إلا من ثلاث: صدقة جارية، أو علم ينتفع به، أو ولد صالح يدعو له»
             </p>

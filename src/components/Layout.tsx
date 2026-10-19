@@ -19,7 +19,7 @@ export default function Layout() {
       <header className="sticky top-0 z-40 border-b border-sand-200/80 bg-sand-50/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
           <Link to="/home" className="flex items-center gap-2.5">
-            <Logo className="h-10 w-10" />
+            <Logo className="h-11 w-auto" />
             <div className="leading-tight">
               <div className="text-[15px] font-bold text-brand-800 sm:text-base">{site.name}</div>
               <div className="hidden text-xs text-muted sm:block">{site.subtitle}</div>
@@ -69,10 +69,9 @@ export default function Layout() {
       <footer className="hidden border-t border-sand-200 bg-brand-800 text-sand-100 md:block">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 text-sm">
           <div className="flex items-center gap-2">
-            <Logo className="h-7 w-7" mono />
+            <Logo className="h-7 w-auto" variant="white" />
             <span>{site.name} — منصة رقمية لخدمة كتاب الله</span>
           </div>
-          <span className="text-gold-300">{site.footer}</span>
         </div>
       </footer>
 

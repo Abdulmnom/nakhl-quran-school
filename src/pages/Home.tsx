@@ -11,19 +11,24 @@ export default function Home() {
   return (
     <div className="mx-auto max-w-6xl px-4 pt-4 md:pt-8">
       {/* البطل */}
-      <section className="relative overflow-hidden rounded-3xl shadow-xl shadow-brand-900/10">
-        <img
-          src={img('hero')}
-          alt="مبنى مدرسة نخل للقرآن الكريم"
-          className="h-[300px] w-full object-cover sm:h-[380px] md:h-[460px]"
-          fetchPriority="high"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-900/90 via-brand-900/45 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 p-6 text-white md:p-10">
+      <section className="overflow-hidden rounded-3xl bg-brand-800 shadow-xl shadow-brand-900/10">
+        <div className="relative">
+          <picture>
+            <source media="(max-width: 640px)" srcSet={img('hero', 'sm')} />
+            <img
+              src={img('hero')}
+              alt="تصور مبدئي لمبنى مدرسة نخل الوقفية للقرآن الكريم"
+              className="aspect-video w-full object-cover"
+              fetchPriority="high"
+            />
+          </picture>
+          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-brand-800 to-transparent" />
+        </div>
+        <div className="relative -mt-6 px-6 pb-7 text-center text-white md:-mt-16 md:px-10 md:pb-10">
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-sm text-gold-300"
+            className="font-ruqaa text-3xl leading-normal text-gold-300 drop-shadow-md sm:text-4xl md:text-5xl"
           >
             {site.tagline}
           </motion.p>
@@ -31,7 +36,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="mt-1 text-3xl font-bold leading-tight md:text-5xl"
+            className="mt-2 font-kufi text-3xl font-bold leading-tight drop-shadow md:text-5xl"
           >
             {site.name}
           </motion.h1>
@@ -39,7 +44,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mt-2 max-w-xl text-sand-100/90 md:text-lg"
+            className="mx-auto mt-2 max-w-xl text-lg text-sand-100/90 md:text-xl"
           >
             تعليم القرآن الكريم ... بناء للأجيال
           </motion.p>
@@ -52,6 +57,7 @@ export default function Home() {
               ساهم بالتبرع
             </Link>
           </motion.div>
+          <p className="mt-4 text-xs text-sand-100/60">الصورة: تصور مبدئي لمبنى المدرسة</p>
         </div>
       </section>
 
@@ -155,10 +161,11 @@ export default function Home() {
       {/* دعوة للتبرع */}
       <section className="my-10 overflow-hidden rounded-3xl bg-brand-700 p-6 text-white md:my-14 md:flex md:items-center md:justify-between md:p-10">
         <div>
-          <h2 className="text-2xl font-bold md:text-3xl">كن شريكاً في الأجر</h2>
-          <p className="mt-2 max-w-lg text-sand-100/85">
-            مساهمتك تدعم استمرار حلقات التحفيظ وصيانة المرافق وتجهيز الفصول — صدقة جارية بإذن الله.
+          <h2 className="font-kufi text-2xl font-bold md:text-4xl">كن شريكاً في الأجر</h2>
+          <p className="mt-2 max-w-lg text-sand-100/85 md:text-lg">
+            مساهمتك تدعم استمرار حلقات التحفيظ وصيانة المرافق وتجهيز الفصول
           </p>
+          <p className="mt-3 font-ruqaa text-3xl text-gold-300 md:text-4xl">صدقة جارية بإذن الله</p>
         </div>
         <Link
           to="/donate"
