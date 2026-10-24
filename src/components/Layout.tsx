@@ -47,7 +47,7 @@ export default function Layout() {
             className="hidden items-center gap-2 rounded-full bg-gold-500 px-5 py-2.5 text-sm font-semibold text-brand-900 shadow-sm transition hover:bg-gold-300 md:inline-flex"
           >
             <HandHeart className="h-4 w-4" />
-            ساهم بالتبرع
+            ساهم في سهم وقفي
           </Link>
         </div>
       </header>

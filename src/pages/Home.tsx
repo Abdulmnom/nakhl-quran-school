@@ -54,7 +54,7 @@ export default function Home() {
               className="mt-5 inline-flex items-center gap-2 rounded-full bg-gold-500 px-6 py-3 font-semibold text-brand-900 shadow-lg transition hover:bg-gold-300"
             >
               <HandHeart className="h-5 w-5" />
-              ساهم بالتبرع
+              ساهم في سهم وقفي
             </Link>
           </motion.div>
           <p className="mt-4 text-xs text-sand-100/60">الصورة: تصور مبدئي لمبنى المدرسة</p>
