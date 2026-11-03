@@ -4,6 +4,8 @@ import { ArrowLeft, BookOpen, HandHeart, MapPin, Phone } from 'lucide-react'
 import { site } from '../data/site'
 import { gallery, img } from '../data/gallery'
 import { navItems } from '../components/nav'
+import ProjectSections from '../components/ProjectSections'
+import { identity } from '../data/project'
 
 const quick = navItems.filter((n) => n.to !== '/home')
 
@@ -46,7 +48,7 @@ export default function Home() {
             transition={{ delay: 0.2 }}
             className="mx-auto mt-2 max-w-xl text-lg text-sand-100/90 md:text-xl"
           >
-            تعليم القرآن الكريم ... بناء للأجيال
+            {identity.slogan}
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <Link
@@ -123,16 +125,38 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:col-span-2">
-          {site.programs.map((p) => (
-            <div key={p.title} className="rounded-2xl border border-sand-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-3 sm:grid-cols-2 md:col-span-2 md:grid-cols-1">
+          {[
+            { title: 'رسالتنا', text: identity.mission },
+            { title: 'لماذا تحتاجها ولاية نخل؟', text: identity.why },
+          ].map((c) => (
+            <div key={c.title} className="rounded-2xl border border-sand-200 bg-white p-4 shadow-sm">
               <div className="mb-2 h-1 w-8 rounded-full bg-gold-500" />
-              <h3 className="font-semibold text-brand-800">{p.title}</h3>
-              <p className="mt-1 text-sm leading-6 text-muted">{p.text}</p>
+              <h3 className="font-semibold text-brand-800">{c.title}</h3>
+              <p className="mt-1 text-sm leading-7 text-muted">{c.text}</p>
+            </div>
+          ))}
+          {[
+            { title: 'الأهداف', items: identity.goals },
+            { title: 'البناء والمرافق', items: identity.building },
+          ].map((c) => (
+            <div key={c.title} className="rounded-2xl border border-sand-200 bg-white p-4 shadow-sm">
+              <div className="mb-2 h-1 w-8 rounded-full bg-gold-500" />
+              <h3 className="font-semibold text-brand-800">{c.title}</h3>
+              <ul className="mt-1 grid gap-1 text-sm leading-6 text-muted">
+                {c.items.map((it) => (
+                  <li key={it} className="flex gap-2">
+                    <span className="text-gold-500">✦</span>
+                    {it}
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>
       </section>
+
+      <ProjectSections />
 
       {/* لمحة من الصور */}
       <section className="mt-10 md:mt-14">
@@ -158,12 +182,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* دعوة للتبرع */}
+      {/* دعوة للسهم الوقفي */}
       <section className="my-10 overflow-hidden rounded-3xl bg-brand-700 p-6 text-white md:my-14 md:flex md:items-center md:justify-between md:p-10">
         <div>
           <h2 className="font-kufi text-2xl font-bold md:text-4xl">كن شريكاً في الأجر</h2>
           <p className="mt-2 max-w-lg text-sand-100/85 md:text-lg">
-            مساهمتك تدعم استمرار حلقات التحفيظ وصيانة المرافق وتجهيز الفصول
+            سهمك يُسهم في بناء المدرسة والوقف الذي يضمن استدامة برامجها لخدمة كتاب الله
           </p>
           <p className="mt-3 font-ruqaa text-3xl text-gold-300 md:text-4xl">صدقة جارية بإذن الله</p>
         </div>
@@ -171,7 +195,7 @@ export default function Home() {
           to="/donate"
           className="mt-5 inline-flex items-center gap-2 rounded-full bg-gold-500 px-6 py-3 font-semibold text-brand-900 transition hover:bg-gold-300 md:mt-0"
         >
-          <HandHeart className="h-5 w-5" /> تبرّع الآن
+          <HandHeart className="h-5 w-5" /> ساهم بسهم وقفي
         </Link>
       </section>
     </div>

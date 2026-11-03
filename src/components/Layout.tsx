@@ -1,13 +1,18 @@
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { HandHeart } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Logo from './Logo'
 import { navItems } from './nav'
+import { OpeningModal, OpeningOverlay, SHEIKH_LAYOUT_ID, readActivated } from './OpeningWord'
 import { site } from '../data/site'
+import { opening } from '../data/project'
+import { img } from '../data/gallery'
 
 export default function Layout() {
   const location = useLocation()
+  const [activated, setActivated] = useState(readActivated)
+  const [quoteOpen, setQuoteOpen] = useState(false)
 
   useEffect(() => {
     window.scrollTo({ top: 0 })
@@ -42,13 +47,47 @@ export default function Layout() {
             ))}
           </nav>
 
-          <Link
-            to="/donate"
-            className="hidden items-center gap-2 rounded-full bg-gold-500 px-5 py-2.5 text-sm font-semibold text-brand-900 shadow-sm transition hover:bg-gold-300 md:inline-flex"
-          >
-            <HandHeart className="h-4 w-4" />
-            ساهم في سهم وقفي
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/donate"
+              className="hidden items-center gap-2 rounded-full bg-gold-500 px-5 py-2.5 text-sm font-semibold text-brand-900 shadow-sm transition hover:bg-gold-300 md:inline-flex"
+            >
+              <HandHeart className="h-4 w-4" />
+              ساهم في سهم وقفي
+            </Link>
+
+            {/* صورة سماحة الشيخ — تستقر هنا بعد تفعيل الموقع */}
+            {activated && (
+              <button
+                onClick={() => setQuoteOpen(true)}
+                className="relative grid h-12 w-12 shrink-0 place-items-center"
+                aria-label={`كلمة ${opening.speaker}`}
+                title={`كلمة ${opening.speaker}`}
+              >
+                <motion.span
+                  className="absolute inset-0 rounded-full"
+                  style={{ background: 'conic-gradient(var(--color-gold-300), var(--color-brand-500), var(--color-gold-500), var(--color-gold-300))' }}
+                  initial={{ opacity: 0, rotate: 0 }}
+                  animate={{ opacity: 1, rotate: 360 }}
+                  transition={{ opacity: { delay: 0.9 }, rotate: { duration: 6, repeat: Infinity, ease: 'linear' } }}
+                />
+                <motion.img
+                  layoutId={SHEIKH_LAYOUT_ID}
+                  src={img(opening.image)}
+                  alt=""
+                  className="relative h-11 w-11 rounded-full border-2 border-sand-50 object-cover"
+                  transition={{ type: 'spring', stiffness: 70, damping: 15, mass: 1.1 }}
+                  style={{ borderRadius: '9999px' }}
+                />
+                <motion.span
+                  className="absolute -bottom-0.5 -left-0.5 h-3.5 w-3.5 rounded-full border-2 border-sand-50 bg-gold-500"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: [0, 1.4, 1] }}
+                  transition={{ delay: 1.1, duration: 0.5 }}
+                />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -74,6 +113,9 @@ export default function Layout() {
           </div>
         </div>
       </footer>
+
+      <AnimatePresence>{!activated && <OpeningOverlay key="opening" onActivate={() => setActivated(true)} />}</AnimatePresence>
+      <OpeningModal open={quoteOpen} onClose={() => setQuoteOpen(false)} />
 
       {/* شريط التنقل السفلي للجوال */}
       <nav

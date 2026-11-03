@@ -1,6 +1,5 @@
 import { Link, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
-import Splash from './pages/Splash'
 import Home from './pages/Home'
 import Gallery from './pages/Gallery'
 import MapPage from './pages/MapPage'
@@ -20,8 +19,8 @@ function NotFound() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Splash />} />
       <Route element={<Layout />}>
+        <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
         <Route path="/gallery" element={<Gallery />} />
         <Route path="/map" element={<MapPage />} />

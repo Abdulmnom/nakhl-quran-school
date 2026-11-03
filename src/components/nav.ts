@@ -6,5 +6,5 @@ export const navItems: NavItem[] = [
   { to: '/home', label: 'الرئيسية', icon: Home, desc: 'نظرة عامة على المدرسة' },
   { to: '/gallery', label: 'الصور', icon: Images, desc: 'استعرض صور المدرسة' },
   { to: '/map', label: 'الخريطة', icon: MapPinned, desc: 'تعرّف على مرافق المدرسة' },
-  { to: '/donate', label: 'التبرع', icon: HandHeart, desc: 'ساهم في دعم المدرسة' },
+  { to: '/donate', label: 'السهم الوقفي', icon: HandHeart, desc: 'ساهم بسهم وقفي في بناء المدرسة' },
 ]
